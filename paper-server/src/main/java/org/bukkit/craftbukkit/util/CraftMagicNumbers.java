@@ -14,7 +14,9 @@ import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JavaOps;
 import com.mojang.serialization.JsonOps;
 import io.papermc.paper.adventure.AdventureCodecs;
-import io.papermc.paper.adventure.PaperAdventure;
+import io.papermc.paper.entity.EntitySerializationFlag;
+import io.papermc.paper.plugin.bytecode.EventToInterfaceMigration;
+import io.papermc.paper.pluginremap.reflect.ReflectionRemapper;
 import io.papermc.paper.registry.RegistryKey;
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Stream;
-import io.papermc.paper.entity.EntitySerializationFlag;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.SharedConstants;
 import net.minecraft.advancements.AdvancementHolder;
@@ -61,7 +62,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.UnsafeValues;
 import org.bukkit.World;
 import org.bukkit.advancement.Advancement;
@@ -391,20 +391,22 @@ public final class CraftMagicNumbers implements UnsafeValues {
     }
 
     @Override
-    public byte[] processClass(PluginDescriptionFile pdf, String path, byte[] clazz) {
+    public byte[] processClass(PluginDescriptionFile pdf, String path, byte[] bytes) {
         // Paper start
         if (DISABLE_OLD_API_SUPPORT) {
             // Make sure we still go through our reflection rewriting if needed
-            return io.papermc.paper.pluginremap.reflect.ReflectionRemapper.processClass(clazz);
+            bytes = ReflectionRemapper.processClass(bytes);
+            bytes = EventToInterfaceMigration.processClass(bytes);
+            return bytes;
         }
         // Paper end
         try {
-            clazz = this.commodore.convert(clazz, pdf.getName(), ApiVersion.getOrCreateVersion(pdf.getAPIVersion()), ((CraftServer) Bukkit.getServer()).activeCompatibilities);
+            bytes = this.commodore.convert(bytes, pdf.getName(), ApiVersion.getOrCreateVersion(pdf.getAPIVersion()), ((CraftServer) Bukkit.getServer()).activeCompatibilities);
         } catch (Exception ex) {
             Bukkit.getLogger().log(Level.SEVERE, "Fatal error trying to convert " + pdf.getFullName() + ":" + path, ex);
         }
 
-        return clazz;
+        return bytes;
     }
 
     @Override
