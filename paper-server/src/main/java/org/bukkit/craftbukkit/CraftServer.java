@@ -1212,6 +1212,13 @@ public final class CraftServer implements Server {
             default -> throw new IllegalArgumentException("Illegal dimension (" + creator.environment() + ")");
         };
 
+        // Neue Prüfung: Wenn die angeforderte Dimension der Nether ist, aber der Server das Nether
+        // in der Konfiguration deaktiviert hat, abbrechen und null zurückgeben (kein Erzeugen/Laden).
+        if (actualDimension == LevelStem.NETHER && !this.getAllowNether()) {
+            this.getLogger().info("Nether world generation is disabled in server configuration; skipping world '" + name + "'.");
+            return null;
+        }
+
         LevelStorageSource.LevelStorageAccess levelStorageAccess;
         try {
             levelStorageAccess = LevelStorageSource.createDefault(this.getWorldContainer().toPath()).validateAndCreateAccess(name, actualDimension);
